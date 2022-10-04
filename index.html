@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+	<link rel="stylesheet" href="./dependencies/joint.css">
+	<style>
+		html, body {
+			margin: 0;
+		}
+
+		#container {
+			position: relative;
+			width: 100vw;
+			height: 100vh;
+			overflow: hidden;
+		}
+
+		#preview {
+			position: absolute;
+			width: 100px;
+			height: 100px;
+			border: 1px solid #CCCCCC;
+			right: 0;
+			bottom: 0;
+		}
+	</style>
+</head>
+<body>
+	<div id="container">
+		<div id="view"></div>
+		<div id="preview"></div>
+	</div>
+
+
+	<script src="./dependencies/lodash.js"></script>
+	<script src="./dependencies/jquery.js"></script>
+	<script src="./dependencies/backbone.js"></script>
+	<script src="./dependencies/jquery.js"></script>
+	<script src="./dependencies/joint.js"></script>
+
+	<script src="./diagram-module.js"></script>
+	<script>
+		(function() {
+			window.app = new $ERDApp({
+				viewEl: document.getElementById("view"),
+				previewEl: document.getElementById("preview"),
+				afterInit: function () {
+					// GENERATE TABLES
+					for(let i = 0; i < 10; i++) {
+						const rows = [];
+						for(let j = 0; j < 10; j++) {
+							rows.push({id: `row-${j}`, name: `row-${j}`, type: `test-type-${j}`});
+						}
+
+						const table = new joint.shapes.sdtm.TableElement({
+							attrs: {".table_name": {text: "Table_" + i}},
+							rows: rows,
+							position: {x: 50 + 250 * (i % 5), y: 50 + 350 * Math.floor(i / 5)}
+						});
+						table.addTo(this.graph);
+					}
+				}
+			});
+		})();
+	</script>
+</body>
+</html>
