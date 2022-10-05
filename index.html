@@ -33,6 +33,7 @@
 		<div id="view"></div>
 		<div id="preview"></div>
 	</div>
+	<div id="view2" style="display:none;"></div>
 
 
 	<script src="./dependencies/lodash.js"></script>
@@ -64,6 +65,10 @@
 					}
 				}
 			});
+
+			window.app2 = new $ERDApp({
+				viewEl: document.getElementById("view2")
+			})
 		})();
 	</script>
 </body>

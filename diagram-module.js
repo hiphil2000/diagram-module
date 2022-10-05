@@ -1,3 +1,4 @@
+"use strict";
 /// <reference path="./dependencies/jquery.js" />
 /// <reference path="./dependencies/backbone.js" />
 /// <reference path="./dependencies/lodash.js" />
@@ -15,55 +16,197 @@ Inbrien
 	/// </summary>
 
 	var $ERDView = (function() {
-		var _options;
-		var _graph;
-		var _container;
-		var _view;
-		var _paper;
+		var privates = new WeakMap();
+		var _ = function (self) {
+			/// <summary>
+			/// Private 접근 Shourtcut입니다.
+			/// </summary>
+
+			return privates.get(self);
+		}
+		var _set = function (self, key, value) {
+			/// <summary>
+			/// Private variable을 설정합니다.
+			/// </summary>
+
+			var _ = privates.get(self);
+			if (_[key] instanceof Object) {
+				Object.assign(_[key], value);
+			} else {
+				_[key] = value;
+			}
+			privates.set(self, _);
+		};
 
 		var ERDView = function(options) {
-			_options = options;
-			_graph = options.graph;
+			/// <summary>
+			/// ERD View의 Constructor
+			/// </summary>
 
-			Object.defineProperty(this, "options", {
-				get() { return _options; }
+			// Initialize privgate variables
+			privates.set(this, {
+				// Constructor를 통해 받은 View Options
+				options: options,
+				// ERD View의 Graph(model)
+				graph: options.graph,
+				// ERD View의 Container Element
+				container: null,
+				// ERD View의 View Element(JointJS Paper Element)
+				view: null,
+				// ERD View의 JointJS Paper Object
+				paper: null,
+				// Panning Event Data
+				panData: {
+					backgrounds: [],
+					isWorking: false,
+					transform: null,
+					anchorX: null,
+					anchorY: null,
+					transformX: null,
+					transformY: null
+				}
 			});
-			Object.defineProperty(this, "paper", {
-				get() { return _paper; }
+
+			// Initialize properties
+			Object.defineProperties(this, {
+				options: {
+					get() { return _(this).options; }
+				},
+				paper: {
+					get() { return _(this).paper; }
+				},
+				graph: {
+					get() { return _(this).graph; }
+				},
+				view: {
+					get() { return _(this).view; }
+				},
+				container: {
+					get() { return _(this).container; }
+				},
 			});
-			Object.defineProperty(this, "graph", {
-				get() { return _graph; }
-			});
-			Object.defineProperty(this, "view", {
-				get() { return _view; }
-			});
-			Object.defineProperty(this, "container", {
-				get() { return _container; }
-			});
-			
+
+			// Create DOMs
 			createDOMs.call(this);
+
+			// Initialize ERD View
 			initialize.call(this);
 		}
 		
-		
 		function createDOMs() {
-			var containerEl = _options.el;
+			/// <summary>
+			/// 필요한 DOM을 생성합니다.
+			/// </summary>
+
+			var containerEl = this.options.el;
 			var viewEl = document.createElement("div");
 			viewEl.id = containerEl.id + "-view";
 			containerEl.appendChild(viewEl);
 
-			_container = containerEl;
-			_view = viewEl;
+			_set(this, "container", containerEl);
+			_set(this, "view", viewEl);
 		}
 
 		function initialize() {
-			var paper = new joint.dia.Paper({
-				el: _view,
-				model: _graph,
-				cellViewNamespace: _options.namespace,
-			});
+			/// <summary>
+			/// ERD View instance를 초기화합니다.
+			/// </summary>
 
-			_paper = paper;
+			// Initialize JointJS Paper
+			_set(this, "paper", new joint.dia.Paper({
+				el: this.view,
+				model: this.graph,
+				cellViewNamespace: this.options.namespace,
+			}));
+
+			// Set panning feature
+			// Panning이 가능한 Element 목록을 초기화합니다.
+			_set(this, "panData", {
+				backgrounds: [].concat(this.container, this.view, Array.from(this.view.querySelectorAll("svg")))
+			});
+			window.addEventListener("mousedown", handlePanStart.bind(this));
+			window.addEventListener("mousemove", handlePanning.bind(this));
+			window.addEventListener("mouseup", handlePanEnd.bind(this));
+			window.addEventListener("pointerup", handlePanEnd.bind(this));
+		}
+
+		function handlePanStart(e) {
+			/// <summary>
+			/// Pan Start Event를 처리합니다.
+			/// </summary>
+
+			var panData = _(this).panData;
+			if (panData.isWorking) {
+				return;
+			}
+			if (!panData.backgrounds.includes(e.target)) {
+				return;
+			}
+			
+			var translate = parseTranslate(this.view.style.transform);
+
+			panData.isWorking = true;
+			panData.anchorX = e.clientX;
+			panData.anchorY = e.clientY;
+			panData.transformX = translate[0];
+			panData.transformY = translate[1];
+		}
+		
+		function handlePanning(e) {
+			/// <summary>
+			/// Panning(mouse move) Event를 처리합니다.
+			/// </summary>
+
+			var panData = _(this).panData;
+			if (!panData.isWorking) {
+				return;
+			}
+
+			var computeX = panData.transformX + (e.clientX - panData.anchorX);
+			var computeY = panData.transformY + (e.clientY - panData.anchorY);
+
+			this.view.style.transform = toTranslate(computeX, computeY);
+		}
+
+		function handlePanEnd(e) {
+			/// <summary>
+			/// Pan End Event를 처리합니다.
+			/// </summary>
+
+			var panData = _(this).panData;
+			if (!panData.isWorking) {
+				return;
+			}
+
+			_set(this, "panData", {
+				isWorking: false,
+				anchorX: null,
+				anchorY: null,
+				transformX: null,
+				transformY: null,
+			});
+		}
+
+		function parseTranslate(transform) {
+			/// <summary>
+			/// transform의 translate를 추출합니다.
+			/// </summary>
+			/// <param name="transform">css transform string</param>
+			/// <returns>translate[x, y]</returns>
+			
+			var match = transform.match(/translate\(([^,]+),([^,]+)\)/);
+			return match == null ? [0, 0] : match.slice(1, 3).map(function(x){return parseInt(x.replace("px", ""));});
+		}
+
+		function toTranslate(x, y) {
+			/// <summary>
+			/// translate array를 transform string으로 변환합니다.
+			/// </summary>
+			/// <param name="x">translate x</param>
+			/// <param name="y">translate y</param>
+			/// <returns>transform string</returns>
+			
+			return `translate(${x}px, ${y}px)`;
 		}
 
 		return ERDView;
