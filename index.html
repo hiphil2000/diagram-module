@@ -49,20 +49,23 @@
 				viewEl: document.getElementById("view"),
 				previewEl: document.getElementById("preview"),
 				afterInit: function () {
-					// GENERATE TABLES
-					for(let i = 0; i < 10; i++) {
-						const rows = [];
-						for(let j = 0; j < 10; j++) {
-							rows.push({id: `row-${j}`, name: `row-${j}`, type: `test-type-${j}`});
-						}
+					// // GENERATE TABLES
+					// for(let i = 0; i < 10; i++) {
+					// 	const rows = [];
+					// 	for(let j = 0; j < 10; j++) {
+					// 		rows.push({id: `row-${j}`, name: `row-${j}`, type: `test-type-${j}`});
+					// 	}
 
-						const table = new joint.shapes.sdtm.TableElement({
-							attrs: {".table_name": {text: "Table_" + i}},
-							rows: rows,
-							position: {x: 50 + 250 * (i % 5), y: 50 + 350 * Math.floor(i / 5)}
-						});
-						table.addTo(this.graph);
-					}
+					// 	const table = new joint.shapes.sdtm.TableElement({
+					// 		attrs: {".table_name": {text: "Table_" + i}},
+					// 		rows: rows,
+					// 		position: {x: 50 + 250 * (i % 5), y: 50 + 350 * Math.floor(i / 5)}
+					// 	});
+					// 	table.addTo(this.graph);
+					// }
+
+					var elem = new joint.shapes.sdtm.HtmlElement();
+					elem.addTo(this.graph);
 				}
 			});
 

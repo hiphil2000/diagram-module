@@ -526,3 +526,41 @@ Inbrien
 	}
 
 })(window);
+
+// HTML Element & View
+(function(window){
+	joint.shapes.sdtm.HtmlElement = joint.dia.Element.extend({
+		defaults: joint.util.deepSupplement({
+			type: "sdtm.HtmlElement",
+			attrs: {
+				rect: {width: 100, height: 100}
+			},
+			markup: `
+				<rect />
+			`
+		}, joint.dia.Element.prototype.defaults)
+	});
+	
+	joint.shapes.sdtm.HtmlElementView = joint.dia.ElementView.extend({
+		template: [
+			'<input type="text" name="input1" value="" />'
+		].join(""),
+
+		initialize: function() {
+			joint.dia.ElementView.prototype.initialize.apply(this, arguments);
+
+			this.$input = $(this.template);
+			this.$input.on("input", this.handleInput);
+		},
+
+		render: function() {
+			joint.dia.ElementView.prototype.render.apply(this, arguments);
+			this.paper.$el.append(this.$input);
+			return this;
+		},
+
+		handleInput: function(e) {
+			console.log(e.value);
+		}
+	})
+})(window);
