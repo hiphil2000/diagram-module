@@ -572,6 +572,18 @@ Inbrien
 				overflow: hidden;
 				user-select: none;
 				pointer-events: none;
+				padding: 1em .25em .25em .25em;
+				box-sizing: border-box;
+			}
+
+			.html-element:before {
+				content: "";
+				position: absolute;
+				left: 0;
+				top: 0;
+				width: 100%;
+				height: 6px;
+				background-color: #CCCCCC
 			}
 
 			.html-element * {
@@ -591,10 +603,16 @@ Inbrien
 				checkbox: false,
 			},
 			attrs: {
-				rect: {width: 100, height: 100}
+				rect: {
+					refWidth: "100%",
+					refHeight: "100%",
+					fill: "transparent",
+					stroke: "#CCCCCC",
+					strokeWidth: 1,
+				}
 			},
 			size: {
-				width: 100,
+				width: 150,
 				height: 100
 			},
 			markup: `
