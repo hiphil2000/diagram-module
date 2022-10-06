@@ -217,10 +217,41 @@ Inbrien
 
 
 // ERDPreview
-(function(window) {
+(function(window, joint, util) {
 	/// <summary>
 	/// ERD Preview Class
 	/// </summary>
+
+	var ERDPreviewElementView = joint.dia.ElementView.extend({
+		body: null,
+		markup: [{
+			tagName: "rect",
+			selector: "body",
+			attributes: {
+				fill: "#31d0c6"
+			}
+		}],
+		initFlag: ["RENDER", "UPDATE", "TRANSFORM"],
+		presentationAttributes: {
+			size: ["UPDATE"],
+			position: ["TRANSFORM"],
+		},
+		confirmUpdate: function(flags) {
+			if (this.hasFlag(flags, "RENDER")) this.render();
+			if (this.hasFlag(flags, "UPDATE")) this.update();
+			if (this.hasFlag(flags, "TRANSFORM")) this.updateTransformation();
+		},
+		render: function() {
+			var doc = util.parseDOMJSON(this.markup);
+			this.body = doc.selectors.body;
+			this.el.appendChild(doc.fragment);
+		},
+		update: function() {
+			var size = this.model.size();
+			this.body.setAttribute("width", size.width);
+			this.body.setAttribute("height", size.height);
+		}
+	})
 	
 	var $ERDPreview = function(options) {
 		this._options = options;
@@ -233,10 +264,11 @@ Inbrien
 		var paper = new joint.dia.Paper({
 			el: this._options.el,
 			model: this._graph,
-			cellViewNamespace: this._options.namespace,
+			cellViewNamespace: {},
 			width: 100,
 			height: 100,
 			interactive: false,
+			elementView: ERDPreviewElementView
 		});
 
 		paper.scale(0.12);
@@ -249,7 +281,7 @@ Inbrien
 	}
 
 	window.$ERDPreview = window.$ERDPreview || $ERDPreview;
-})(window);
+})(window, joint, joint.util);
 
 // ERDApp
 (function(window) {
@@ -529,38 +561,139 @@ Inbrien
 
 // HTML Element & View
 (function(window){
+	if (!document.getElementById("css-sdtm-htmlelement")) {
+		var style = document.createElement("style");
+		style.id = "css-sdtm-htmlelement";
+		style.innerHTML = `
+			.html-element {
+				display: flex;
+				flex-direction: column;
+				position: absolute;
+				overflow: hidden;
+				user-select: none;
+				pointer-events: none;
+			}
+
+			.html-element * {
+				pointer-events: initial;
+			}
+		`
+		var ref = document.querySelector("script");
+		ref.parentNode.insertBefore(style, ref);
+	}
+
 	joint.shapes.sdtm.HtmlElement = joint.dia.Element.extend({
 		defaults: joint.util.deepSupplement({
 			type: "sdtm.HtmlElement",
+			data: {
+				text: "",
+				select: "",
+				checkbox: false,
+			},
 			attrs: {
 				rect: {width: 100, height: 100}
 			},
+			size: {
+				width: 100,
+				height: 100
+			},
 			markup: `
-				<rect />
+				<rect tabindex="0" />
 			`
 		}, joint.dia.Element.prototype.defaults)
 	});
+
+	function api() {
+		return new Promise((res, rej) => {
+			setTimeout(() => {
+				res({
+					jsonData: [
+						{text: "dropdown1", value: "1"},
+						{text: "dropdown2", value: "2"},
+						{text: "dropdown3", value: "3"},
+						{text: "dropdown4", value: "4"},
+					]
+				});
+			}, 1000);
+		})
+	}
 	
 	joint.shapes.sdtm.HtmlElementView = joint.dia.ElementView.extend({
 		template: [
-			'<input type="text" name="input1" value="" />'
+			'<div class="html-element" style="position: absolute;">',
+				'<input class="input" type="text" name="text" value="" />',
+				'<select name="select"></select>',
+				'<label><input type="checkbox" name="checkbox" checked="false" /> checkbox</label>',
+			'</div>'
 		].join(""),
 
 		initialize: function() {
 			joint.dia.ElementView.prototype.initialize.apply(this, arguments);
+			
+			this.$DOM = $(this.template);
 
-			this.$input = $(this.template);
-			this.$input.on("input", this.handleInput);
+			this.$text = this.$DOM.find('input[name="text"]');
+			this.$text.on("input", this.handleData.bind(this));
+
+			this.$select = this.$DOM.find('select[name="select"]');
+			this.$select.on("change", this.handleData.bind(this));
+
+			this.$checkbox = this.$DOM.find('input[name="checkbox"]');
+			this.$checkbox.on("change", this.handleData.bind(this));
+			
+			this.model.on("change", this.updateDOM, this);
+			this.updateDOM();
 		},
-
+		
 		render: function() {
 			joint.dia.ElementView.prototype.render.apply(this, arguments);
-			this.paper.$el.append(this.$input);
+			this.paper.$el.append(this.$DOM);
+			this.updateDOM();
+
+			var self = this;
+			api().then(function(res) {
+				self.$select.html("");
+				res.jsonData
+					.map(function(item) {
+						var option = document.createElement("option");
+						option.innerText = item.text;
+						option.value = item.value;
+						return option;
+					})
+					.forEach(function(opt) {
+						self.$select.append(opt);
+					});
+			});
+
 			return this;
 		},
 
-		handleInput: function(e) {
-			console.log(e.value);
-		}
+		updateDOM: function() {
+			var bbox = this.model.getBBox();
+
+			this.$DOM.css({
+				width: bbox.width,
+				height: bbox.height,
+				transform: `translate(${bbox.x}px, ${bbox.y}px)`
+			});
+		},	
+
+		handleData: function(e) {
+			var target = e.target;
+			var data = this.model.prop("data");
+			
+			switch(target.name) {
+				case "text":
+				case "select":
+					data[target.name] = target.value;
+					break;
+				case "checkbox":
+					data[target.name] = target.checked;
+					break;
+			};
+
+			this.model.prop("data", data);
+			console.log(this.model.prop("data"));
+		},
 	})
 })(window);
